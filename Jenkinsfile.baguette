@@ -179,6 +179,33 @@ pipeline {
                 }
             }
         }
+        stage('Publish image to DockerHub') {
+            agent {
+                label 'team-local && linux'
+            }
+            environment {
+                DOCKERHUB_CREDS=credentials('dockerhub-dockerdsgcibot')
+            }
+            steps {
+                dir('src/github.com/docker/app') {
+                    checkout scm
+                    dir("bin") {
+                        unstash "binaries"
+                    }
+                    script {
+                        docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-dockerdsgcibot') {
+                            sh 'make TAGNAME=${TAGNAME} -f docker.Makefile dockerhub-publish'
+                            sh './update-dockerhub-repo.sh DockerHubRepo.json'
+                        }
+                    }
+                }
+            }
+            post {
+                always {
+                    deleteDir()
+                }
+            }
+        }
     }
 }
 

@@ -6,6 +6,7 @@ BIN_IMAGE_NAME := $(BIN_NAME)-bin:$(TAG)
 CROSS_IMAGE_NAME := $(BIN_NAME)-cross:$(TAG)
 E2E_CROSS_IMAGE_NAME := $(BIN_NAME)-e2e-cross:$(TAG)
 GRADLE_IMAGE_NAME := $(BIN_NAME)-gradle:$(TAG)
+DOCKERHUB_IMAGE_NAME := docker/app
 
 BIN_CTNR_NAME := $(BIN_NAME)-bin-$(TAG)
 CROSS_CTNR_NAME := $(BIN_NAME)-cross-$(TAG)
@@ -50,6 +51,10 @@ e2e-cross: create_bin
 	@$(call chmod,+x,bin/$(BIN_NAME)-e2e-linux)
 	@$(call chmod,+x,bin/$(BIN_NAME)-e2e-darwin)
 	@$(call chmod,+x,bin/$(BIN_NAME)-e2e-windows.exe)
+
+dockerhub-publish:
+	docker build $(BUILD_ARGS) --target export-image -t $(DOCKERHUB_IMAGE_NAME):$(TAGNAME) .
+	docker push $(DOCKERHUB_IMAGE_NAME):$(TAGNAME)
 
 tars:
 	tar czf bin/$(BIN_NAME)-linux.tar.gz -C bin $(BIN_NAME)-linux
