@@ -193,6 +193,7 @@ pipeline {
                 dir('src/github.com/docker/app') {
                     checkout scm
                     script {
+                        sh 'echo $(git describe --abbrev=0 --tags)'
                         sh 'echo ${DOCKERHUB_CREDS_PSW} | docker login --username ${DOCKERHUB_CREDS_USR} --password-stdin'
                         sh 'make TAG_NAME=${TAG_NAME} -f docker.Makefile dockerhub-publish'
                         sh 'docker logout'
