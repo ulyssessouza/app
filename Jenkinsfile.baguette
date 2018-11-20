@@ -197,7 +197,7 @@ pipeline {
                     }
                     script {
                         docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-dockerdsgcibot') {
-                            sh 'make TAG_NAME=${TAG_NAME} -f docker.Makefile dockerhub-publish'
+                            sh 'make TAG_NAME=hardcodedtag1 -f docker.Makefile dockerhub-publish'
                             sh './update-dockerhub-repo.sh DockerHubRepo.json'
                         }
                     }
