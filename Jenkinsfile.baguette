@@ -180,35 +180,35 @@ pipeline {
             }
         }
         stage('Publish image to DockerHub') {
-                    agent {
-                        label 'team-local && linux'
+            agent {
+                label 'team-local && linux'
+            }
+            when {
+                buildingTag()
+            }
+            environment {
+                DOCKERHUB_CREDS=credentials('jenkins-docker-hub-credentials')
+            }
+            steps {
+                dir('src/github.com/docker/app') {
+                    checkout scm
+                    dir("bin") {
+                        unstash "binaries"
                     }
-                    when {
-                        buildingTag()
-                    }
-                    environment {
-                        DOCKERHUB_CREDS=credentials('jenkins-docker-hub-credentials')
-                    }
-                    steps {
-                        dir('src/github.com/docker/app') {
-                            checkout scm
-                            dir("bin") {
-                                unstash "binaries"
-                            }
-                            script {
-                                docker.withRegistry('https://registry.hub.docker.com', 'jenkins-docker-hub-credentials') {
-                                    sh 'make TAGNAME=${TAGNAME} -f docker.Makefile dockerhub-publish'
-                                    sh './update-dockerhub-repo.sh DockerHubRepo.json'
-                                }
-                            }
-                        }
-                    }
-                    post {
-                        always {
-                            deleteDir()
+                    script {
+                        docker.withRegistry('https://registry.hub.docker.com', 'jenkins-docker-hub-credentials') {
+                            sh 'make TAGNAME=${TAGNAME} -f docker.Makefile dockerhub-publish'
+                            sh './update-dockerhub-repo.sh DockerHubRepo.json'
                         }
                     }
                 }
+            }
+            post {
+                always {
+                    deleteDir()
+                }
+            }
+        }
     }
 }
 
