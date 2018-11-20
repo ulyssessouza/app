@@ -191,7 +191,7 @@ pipeline {
             }
             steps {
                 dir('src/github.com/docker/app') {
-                    //checkout scm
+                    checkout scm
                     //dir("bin") {
                     //    unstash "binaries"
                     //}
