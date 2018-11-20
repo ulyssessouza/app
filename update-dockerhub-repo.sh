@@ -6,11 +6,10 @@ INPUT_JSON_FILE=$1
 
 if [ ! -f ${INPUT_JSON_FILE} ]; then
     echo "File '${INPUT_JSON_FILE}' is missing. Exiting now..."
-    exit
+    exit 1
 fi
 
 # DOCKERHUB_CREDS_USR and DOCKERHUB_CREDS_PSW must be present as environment variables
-# DOCKERHUB_CREDS_USR will typically be 'docker'
 if [ -z "$DOCKERHUB_CREDS_USR" ] || [ -z "$DOCKERHUB_CREDS_PSW" ] ; then
     echo "Variables missing. Seems that you are running from a console. Prompting user and passwd"
     read  -p 'Username: ' DOCKERHUB_CREDS_USR

@@ -53,8 +53,8 @@ e2e-cross: create_bin
 	@$(call chmod,+x,bin/$(BIN_NAME)-e2e-windows.exe)
 
 dockerhub-publish:
-	docker build $(BUILD_ARGS) --target export-image -t $(DOCKERHUB_IMAGE_NAME):$(TAGNAME) .
-	docker push $(DOCKERHUB_IMAGE_NAME):$(TAGNAME)
+	docker build $(BUILD_ARGS) --target export-image -t $(DOCKERHUB_IMAGE_NAME):$(TAG_NAME) .
+	docker push $(DOCKERHUB_IMAGE_NAME):$(TAG_NAME)
 
 tars:
 	tar czf bin/$(BIN_NAME)-linux.tar.gz -C bin $(BIN_NAME)-linux
