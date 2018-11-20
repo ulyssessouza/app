@@ -47,8 +47,8 @@ pipeline {
                 }
             }
         }
-//        stage('Test') {
-//            parallel {
+        stage('Test') {
+            parallel {
 //                stage("Coverage") {
 //                    environment {
 //                        CODECOV_TOKEN = credentials('jenkins-codecov-token')
@@ -80,31 +80,31 @@ pipeline {
 //                        }
 //                    }
 //                }
-//                stage("Test Linux") {
-//                    agent {
-//                        label 'team-local && linux'
-//                    }
-//		    environment {
-//			DOCKERAPP_BINARY = '../docker-app-linux'
-//		    }
-//                    steps  {
-//                        dir('src/github.com/docker/app') {
-//                            unstash "binaries"
-//                            dir('examples') {
-//                                unstash "examples"
-//                            }
-//                            dir('e2e'){
-//                                unstash "e2e"
-//                            }
-//                            sh './docker-app-e2e-linux --e2e-path=e2e'
-//                        }
-//                    }
-//                    post {
-//                        always {
-//                            deleteDir()
-//                        }
-//                    }
-//                }
+                stage("Test Linux") {
+                    agent {
+                        label 'team-local && linux'
+                    }
+		    environment {
+			DOCKERAPP_BINARY = '../docker-app-linux'
+		    }
+                    steps  {
+                        dir('src/github.com/docker/app') {
+                            unstash "binaries"
+                            dir('examples') {
+                                unstash "examples"
+                            }
+                            dir('e2e'){
+                                unstash "e2e"
+                            }
+                            sh './docker-app-e2e-linux --e2e-path=e2e'
+                        }
+                    }
+                    post {
+                        always {
+                            deleteDir()
+                        }
+                    }
+                }
 //                stage("Test Mac") {
 //                    agent {
 //                        label 'team-local && mac'
@@ -155,8 +155,8 @@ pipeline {
 //                        }
 //                    }
 //                }
-//            }
-//        }
+            }
+        }
         stage('Release') {
             agent {
                 label 'team-local && linux'
