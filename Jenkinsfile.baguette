@@ -192,17 +192,11 @@ pipeline {
             steps {
                 dir('src/github.com/docker/app') {
                     checkout scm
-                    //dir("bin") {
-                    //    unstash "binaries"
-                    //}
                     script {
                         sh 'docker logout'
                         sh 'echo ${DOCKERHUB_CREDS_PSW} | docker login --username ${DOCKERHUB_CREDS_USR} --password-stdin'
-//                        docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-dockerdsgcibot') {
-                        sh 'make TAG_NAME=hardcodedtag2 -f docker.Makefile dockerhub-publish'
-                        sh './update-dockerhub-repo.sh DockerHubRepo.json'
+                        sh 'make TAG_NAME=hardcodedtag3 -f docker.Makefile dockerhub-publish'
                         sh 'docker logout'
-//                        }
                     }
                 }
             }
