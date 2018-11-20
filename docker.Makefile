@@ -53,6 +53,7 @@ e2e-cross: create_bin
 	@$(call chmod,+x,bin/$(BIN_NAME)-e2e-windows.exe)
 
 dockerhub-publish:
+	if [ -z "$(TAG_NAME)" ] ; then echo "No TAG_NAME specified"; exit 1; fi
 	docker build $(BUILD_ARGS) --target export-image -t $(DOCKERHUB_IMAGE_NAME):$(TAG_NAME) .
 	docker push $(DOCKERHUB_IMAGE_NAME):$(TAG_NAME)
 
