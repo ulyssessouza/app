@@ -4,13 +4,13 @@ set -e
 # Json file containing the description of the repository
 INPUT_JSON_FILE=$1
 
-if [ ! -f ${INPUT_JSON_FILE} ]; then
+if [ ! -f "${INPUT_JSON_FILE}" ]; then
     echo "File '${INPUT_JSON_FILE}' is missing. Exiting now..."
     exit 1
 fi
 
 # DOCKERHUB_CREDS_USR and DOCKERHUB_CREDS_PSW must be present as environment variables
-if [ -z "$DOCKERHUB_CREDS_USR" ] || [ -z "$DOCKERHUB_CREDS_PSW" ] ; then
+if [ -z "${DOCKERHUB_CREDS_USR}" ] || [ -z "${DOCKERHUB_CREDS_PSW}" ] ; then
     echo "Variables missing. Seems that you are running from a console. Prompting user and passwd"
     read  -p 'Username: ' DOCKERHUB_CREDS_USR
     read -sp 'Password: ' DOCKERHUB_CREDS_PSW
