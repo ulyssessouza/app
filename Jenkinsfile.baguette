@@ -196,6 +196,7 @@ pipeline {
                     //    unstash "binaries"
                     //}
                     script {
+                        sh 'docker logout'
                         docker.withRegistry('https://registry.hub.docker.com', 'dockerhub-dockerdsgcibot') {
                             sh 'make TAG_NAME=hardcodedtag2 -f docker.Makefile dockerhub-publish'
                             sh './update-dockerhub-repo.sh DockerHubRepo.json'
