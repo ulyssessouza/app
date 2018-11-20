@@ -183,7 +183,7 @@ pipeline {
             agent {
                 label 'team-local && linux'
             }
-            //when {
+            //when{
             //    buildingTag()
             //}
             environment {
