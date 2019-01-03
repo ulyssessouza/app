@@ -20,8 +20,18 @@ LDFLAGS := "-s -w \
   -X $(PKG_NAME)/internal.BuildTime=$(BUILDTIME)"
 
 EXEC_EXT :=
+BROWSER_COMMAND :=
 ifeq ($(OS),Windows_NT)
   EXEC_EXT := .exe
+  BROWSER_COMMAND := explorer
+else
+  UNAME_S := $(shell uname -s)
+  ifeq ($(UNAME_S),Linux)
+    BROWSER_COMMAND := xdg-open
+  endif
+  ifeq ($(UNAME_S),Darwin)
+    BROWSER_COMMAND := open
+  endif
 endif
 
 GO_BUILD := CGO_ENABLED=0 go build -tags=$(BUILDTAGS) -ldflags=$(LDFLAGS)
@@ -79,9 +89,12 @@ coverage-test-e2e: coverage-bin
 
 coverage: coverage-test-unit coverage-test-e2e ## run tests with coverage
 	go install ./vendor/github.com/wadey/gocovmerge/
-	gocovmerge _build/cov/*.out > _build/cov/all.out
-	go tool cover -func _build/cov/all.out
-	go tool cover -html _build/cov/all.out -o _build/cov/coverage.html
+	gocovmerge _build/cov/*.out > $(COVERAGE_OUTPUT)
+	go tool cover -func $(COVERAGE_OUTPUT)
+	go tool cover -html $(COVERAGE_OUTPUT) -o $(COVERAGE_HTML_OUTPUT)
+
+coverage-open: clean coverage
+	$(BROWSER_COMMAND) $(COVERAGE_HTML_OUTPUT)
 
 clean: ## clean build artifacts
 	$(call rmdir,bin)

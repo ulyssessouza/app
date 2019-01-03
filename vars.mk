@@ -30,3 +30,6 @@ endif
 ifeq ($(COMMIT),)
   COMMIT := $(shell git rev-parse --short HEAD 2> $(NULL))
 endif
+
+COVERAGE_OUTPUT := _build/cov/all.out
+COVERAGE_HTML_OUTPUT := _build/cov/coverage.html
