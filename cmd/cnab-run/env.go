@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 
@@ -21,6 +22,7 @@ var storeConfig = contextstore.NewConfig(
 )
 
 func setupDockerContext() (command.Cli, error) {
+	fmt.Println(">>> setupDockerContext")
 	s := contextstore.New(cliconfig.ContextStoreDir(), storeConfig)
 	f, err := os.Open(internal.CredentialDockerContextPath)
 	if err != nil {
@@ -41,16 +43,18 @@ func setupDockerContext() (command.Cli, error) {
 	}); err != nil {
 		return nil, err
 	}
+	fmt.Printf("cli.CurrentContext: %s\n", cli.CurrentContext())
 	authConfigsJSON, err := ioutil.ReadFile(internal.CredentialRegistryPath)
 	if err != nil {
 		return nil, err
 	}
+	fmt.Printf("authConfigsJSON: %s\n", string(authConfigsJSON))
 
 	configFile := cli.ConfigFile()
 
 	if err := json.Unmarshal(authConfigsJSON, &configFile.AuthConfigs); err != nil {
 		return nil, err
 	}
-
+	fmt.Println("<<<", cli)
 	return cli, nil
 }

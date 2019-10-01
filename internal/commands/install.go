@@ -39,15 +39,15 @@ installed. The APP_NAME can also be:
 - a path to a Docker Application definition (.dockerapp) or a CNAB bundle.json
 - a registry Application Package reference`
 
-const example = `$ docker app install myapp.dockerapp --name myinstallation --target-context=mycontext
-$ docker app install myrepo/myapp:mytag --name myinstallation --target-context=mycontext
+const example = `$ docker app install myapp.dockerapp --name myinstallation
+$ docker app install myrepo/myapp:mytag --name myinstallation
 $ docker app install bundle.json --name myinstallation --credential-set=mycredentials.yml`
 
 func installCmd(dockerCli command.Cli) *cobra.Command {
 	var opts installOptions
 
 	cmd := &cobra.Command{
-		Use:     "install [APP_NAME] [--name INSTALLATION_NAME] [--target-context TARGET_CONTEXT] [OPTIONS]",
+		Use:     "install [APP_NAME] [--name INSTALLATION_NAME] [OPTIONS]",
 		Aliases: []string{"deploy"},
 		Short:   "Install an application",
 		Long:    longDescription,
@@ -70,13 +70,13 @@ func installCmd(dockerCli command.Cli) *cobra.Command {
 
 func runInstall(dockerCli command.Cli, appname string, opts installOptions) error {
 	defer muteDockerCli(dockerCli)()
-	opts.SetDefaultTargetContext(dockerCli)
+	opts.SetDefaultInstallerContext(dockerCli)
 
-	bind, err := requiredBindMount(opts.targetContext, opts.orchestrator, dockerCli.ContextStore())
+	bind, err := requiredBindMount(dockerCli.CurrentContext(), opts.orchestrator, dockerCli.ContextStore())
 	if err != nil {
 		return err
 	}
-	bundleStore, installationStore, credentialStore, err := prepareStores(opts.targetContext)
+	bundleStore, installationStore, credentialStore, err := prepareStores(dockerCli.CurrentContext())
 	if err != nil {
 		return err
 	}
@@ -110,7 +110,7 @@ func runInstall(dockerCli command.Cli, appname string, opts installOptions) erro
 		return err
 	}
 
-	driverImpl, errBuf := prepareDriver(dockerCli, bind, nil)
+	driverImpl, errBuf := prepareDriver(dockerCli, bind, os.Stdout)
 	installation.Bundle = bndl
 
 	if err := mergeBundleParameters(installation,
@@ -128,7 +128,9 @@ func runInstall(dockerCli command.Cli, appname string, opts installOptions) erro
 	if err := credentials.Validate(creds, bndl.Credentials); err != nil {
 		return err
 	}
-
+	if err := setInstallerContext(dockerCli, opts.installerContext); err != nil {
+		return err
+	}
 	inst := &action.Install{
 		Driver: driverImpl,
 	}
@@ -143,6 +145,6 @@ func runInstall(dockerCli command.Cli, appname string, opts installOptions) erro
 		return err2
 	}
 
-	fmt.Fprintf(os.Stdout, "Application %q installed on context %q\n", installationName, opts.targetContext)
+	fmt.Fprintf(os.Stdout, "Application %q installed on context %q\n", installationName, dockerCli.CurrentContext())
 	return nil
 }

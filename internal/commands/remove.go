@@ -20,10 +20,10 @@ func uninstallCmd(dockerCli command.Cli) *cobra.Command {
 	var opts uninstallOptions
 
 	cmd := &cobra.Command{
-		Use:     "rm INSTALLATION_NAME [--target-context TARGET_CONTEXT] [OPTIONS]",
+		Use:     "rm INSTALLATION_NAME [OPTIONS]",
 		Short:   "Remove an application",
 		Aliases: []string{"remove"},
-		Example: `$ docker app rm myinstallation --target-context=mycontext`,
+		Example: `$ docker app rm myinstallation`,
 		Args:    cli.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUninstall(dockerCli, args[0], opts)
@@ -37,9 +37,9 @@ func uninstallCmd(dockerCli command.Cli) *cobra.Command {
 
 func runUninstall(dockerCli command.Cli, installationName string, opts uninstallOptions) (mainErr error) {
 	defer muteDockerCli(dockerCli)()
-	opts.SetDefaultTargetContext(dockerCli)
+	opts.SetDefaultInstallerContext(dockerCli)
 
-	_, installationStore, credentialStore, err := prepareStores(opts.targetContext)
+	_, installationStore, credentialStore, err := prepareStores(dockerCli.CurrentContext())
 	if err != nil {
 		return err
 	}
@@ -60,7 +60,7 @@ func runUninstall(dockerCli command.Cli, installationName string, opts uninstall
 			fmt.Fprintf(os.Stderr, "deletion forced for installation %q\n", installationName)
 		}()
 	}
-	bind, err := requiredClaimBindMount(installation.Claim, opts.targetContext, dockerCli)
+	bind, err := requiredClaimBindMount(installation.Claim, dockerCli.CurrentContext(), dockerCli)
 	if err != nil {
 		return err
 	}
@@ -70,6 +70,9 @@ func runUninstall(dockerCli command.Cli, installationName string, opts uninstall
 		return err
 	}
 	if err := credentials.Validate(creds, installation.Bundle.Credentials); err != nil {
+		return err
+	}
+	if err := setInstallerContext(dockerCli, opts.installerContext); err != nil {
 		return err
 	}
 	uninst := &action.Uninstall{
@@ -84,6 +87,6 @@ func runUninstall(dockerCli command.Cli, installationName string, opts uninstall
 	if err := installationStore.Delete(installationName); err != nil {
 		return fmt.Errorf("Failed to delete installation %q from the installation store: %s", installationName, err)
 	}
-	fmt.Fprintf(os.Stdout, "Application %q uninstalled on context %q\n", installationName, opts.targetContext)
+	fmt.Fprintf(os.Stdout, "Application %q uninstalled on context %q\n", installationName, dockerCli.CurrentContext())
 	return nil
 }

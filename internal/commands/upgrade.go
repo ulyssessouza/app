@@ -21,9 +21,9 @@ type upgradeOptions struct {
 func upgradeCmd(dockerCli command.Cli) *cobra.Command {
 	var opts upgradeOptions
 	cmd := &cobra.Command{
-		Use:     "upgrade INSTALLATION_NAME [--target-context TARGET_CONTEXT] [OPTIONS]",
+		Use:     "upgrade INSTALLATION_NAME [OPTIONS]",
 		Short:   "Upgrade an installed application",
-		Example: `$ docker app upgrade myinstallation --target-context=mycontext --set key=value`,
+		Example: `$ docker app upgrade myinstallation --set key=value`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runUpgrade(dockerCli, args[0], opts)
@@ -40,9 +40,9 @@ func upgradeCmd(dockerCli command.Cli) *cobra.Command {
 
 func runUpgrade(dockerCli command.Cli, installationName string, opts upgradeOptions) error {
 	defer muteDockerCli(dockerCli)()
-	opts.SetDefaultTargetContext(dockerCli)
+	opts.SetDefaultInstallerContext(dockerCli)
 
-	bundleStore, installationStore, credentialStore, err := prepareStores(opts.targetContext)
+	bundleStore, installationStore, credentialStore, err := prepareStores(dockerCli.CurrentContext())
 	if err != nil {
 		return err
 	}
@@ -71,7 +71,7 @@ func runUpgrade(dockerCli command.Cli, installationName string, opts upgradeOpti
 		return err
 	}
 
-	bind, err := requiredClaimBindMount(installation.Claim, opts.targetContext, dockerCli)
+	bind, err := requiredClaimBindMount(installation.Claim, dockerCli.CurrentContext(), dockerCli)
 	if err != nil {
 		return err
 	}
@@ -81,6 +81,9 @@ func runUpgrade(dockerCli command.Cli, installationName string, opts upgradeOpti
 		return err
 	}
 	if err := credentials.Validate(creds, installation.Bundle.Credentials); err != nil {
+		return err
+	}
+	if err := setInstallerContext(dockerCli, opts.installerContext); err != nil {
 		return err
 	}
 	u := &action.Upgrade{
@@ -94,6 +97,6 @@ func runUpgrade(dockerCli command.Cli, installationName string, opts upgradeOpti
 	if err2 != nil {
 		return err2
 	}
-	fmt.Fprintf(os.Stdout, "Application %q upgraded on context %q\n", installationName, opts.targetContext)
+	fmt.Fprintf(os.Stdout, "Application %q upgraded on context %q\n", installationName, dockerCli.CurrentContext())
 	return nil
 }

@@ -30,11 +30,11 @@ func statusCmd(dockerCli command.Cli) *cobra.Command {
 	var opts credentialOptions
 
 	cmd := &cobra.Command{
-		Use:     "status INSTALLATION_NAME [--target-context TARGET_CONTEXT] [OPTIONS]",
+		Use:     "status INSTALLATION_NAME [OPTIONS]",
 		Aliases: []string{"ps"},
 		Short:   "Get the installation status of an application",
 		Long:    "Get the installation status of an application. If the installation is a Docker Application, the status shows the stack services.",
-		Example: "$ docker app status myinstallation --target-context=mycontext",
+		Example: "$ docker app status myinstallation",
 		Args:    cli.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runStatus(dockerCli, args[0], opts)
@@ -47,9 +47,9 @@ func statusCmd(dockerCli command.Cli) *cobra.Command {
 
 func runStatus(dockerCli command.Cli, installationName string, opts credentialOptions) error {
 	defer muteDockerCli(dockerCli)()
-	opts.SetDefaultTargetContext(dockerCli)
+	opts.SetDefaultInstallerContext(dockerCli)
 
-	_, installationStore, credentialStore, err := prepareStores(opts.targetContext)
+	_, installationStore, credentialStore, err := prepareStores(dockerCli.CurrentContext())
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func runStatus(dockerCli command.Cli, installationName string, opts credentialOp
 		return nil
 	}
 
-	bind, err := requiredClaimBindMount(installation.Claim, opts.targetContext, dockerCli)
+	bind, err := requiredClaimBindMount(installation.Claim, dockerCli.CurrentContext(), dockerCli)
 	if err != nil {
 		return err
 	}
@@ -84,6 +84,9 @@ func runStatus(dockerCli command.Cli, installationName string, opts credentialOp
 		return err
 	}
 	printHeader(os.Stdout, "STATUS")
+	if err := setInstallerContext(dockerCli, opts.installerContext); err != nil {
+		return err
+	}
 	status := &action.RunCustom{
 		Action: statusAction,
 		Driver: driverImpl,

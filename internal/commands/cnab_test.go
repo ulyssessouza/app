@@ -21,7 +21,6 @@ func TestRequiresBindMount(t *testing.T) {
 
 	testCases := []struct {
 		name               string
-		targetContextName  string
 		targetOrchestrator string
 		expectedRequired   bool
 		expectedEndpoint   string
@@ -29,15 +28,13 @@ func TestRequiresBindMount(t *testing.T) {
 	}{
 		{
 			name:               "kubernetes-orchestrator",
-			targetContextName:  "target-context",
 			targetOrchestrator: "kubernetes",
 			expectedRequired:   false,
 			expectedEndpoint:   "",
 			expectedError:      "",
 		},
 		{
-			name:               "no-context",
-			targetContextName:  "",
+			name:               "swarm-orchestrator",
 			targetOrchestrator: "swarm",
 			expectedRequired:   true,
 			expectedEndpoint:   "/var/run/docker.sock",
@@ -47,7 +44,7 @@ func TestRequiresBindMount(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result, err := requiredBindMount(testCase.targetContextName, testCase.targetOrchestrator, dockerCli.ContextStore())
+			result, err := requiredBindMount("", testCase.targetOrchestrator, dockerCli.ContextStore())
 			if testCase.expectedError == "" {
 				assert.NilError(t, err)
 			} else {

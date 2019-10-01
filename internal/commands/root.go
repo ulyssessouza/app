@@ -90,12 +90,12 @@ func muteDockerCli(dockerCli command.Cli) func() {
 	}
 }
 
-func prepareStores(targetContext string) (store.BundleStore, store.InstallationStore, store.CredentialStore, error) {
+func prepareStores(context string) (store.BundleStore, store.InstallationStore, store.CredentialStore, error) {
 	appstore, err := store.NewApplicationStore(config.Dir())
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	installationStore, err := appstore.InstallationStore(targetContext)
+	installationStore, err := appstore.InstallationStore(context)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -103,7 +103,7 @@ func prepareStores(targetContext string) (store.BundleStore, store.InstallationS
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	credentialStore, err := appstore.CredentialStore(targetContext)
+	credentialStore, err := appstore.CredentialStore(context)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -132,29 +132,40 @@ func (o *parametersOptions) addFlags(flags *pflag.FlagSet) {
 	flags.StringArrayVarP(&o.overrides, "set", "s", []string{}, "Override parameter value")
 }
 
+type installerContextOptions struct {
+	installerContext string
+}
+
+func (o *installerContextOptions) addFlags(flags *pflag.FlagSet) {
+	if internal.Experimental == "on" {
+		flags.StringVar(&o.installerContext, "installer-context", "",
+			"Context on which the application's installer is installed (default: <current-context>)")
+	}
+}
+
+func (o *installerContextOptions) SetDefaultInstallerContext(dockerCli command.Cli) {
+	o.installerContext = getInstallerContext(o.installerContext, dockerCli.CurrentContext())
+}
+
 type credentialOptions struct {
-	targetContext    string
+	installerContextOptions
 	credentialsets   []string
 	credentials      []string
 	sendRegistryAuth bool
 }
 
 func (o *credentialOptions) addFlags(flags *pflag.FlagSet) {
-	flags.StringVar(&o.targetContext, "target-context", "", "Context on which the application is installed (default: <current-context>)")
+	o.installerContextOptions.addFlags(flags)
 	flags.StringArrayVar(&o.credentialsets, "credential-set", []string{}, "Use a YAML file containing a credential set or a credential set present in the credential store")
 	flags.StringArrayVar(&o.credentials, "credential", nil, "Add a single credential, additive ontop of any --credential-set used")
 	flags.BoolVar(&o.sendRegistryAuth, "with-registry-auth", false, "Sends registry auth")
-}
-
-func (o *credentialOptions) SetDefaultTargetContext(dockerCli command.Cli) {
-	o.targetContext = getTargetContext(o.targetContext, dockerCli.CurrentContext())
 }
 
 func (o *credentialOptions) CredentialSetOpts(dockerCli command.Cli, credentialStore store.CredentialStore) []credentialSetOpt {
 	return []credentialSetOpt{
 		addNamedCredentialSets(credentialStore, o.credentialsets),
 		addCredentials(o.credentials),
-		addDockerCredentials(o.targetContext, dockerCli.ContextStore()),
+		addDockerCredentials(dockerCli.CurrentContext(), dockerCli.ContextStore()),
 		addRegistryCredentials(o.sendRegistryAuth, dockerCli),
 	}
 }
@@ -173,4 +184,17 @@ type pullOptions struct {
 
 func (o *pullOptions) addFlags(flags *pflag.FlagSet) {
 	flags.BoolVar(&o.pull, "pull", false, "Pull the bundle")
+}
+
+func setInstallerContext(dockerCli command.Cli, installerContext string) error {
+	//fmt.Println("This is my setInstallerContext with:", installerContext)
+	if installerContext != "" {
+		if _, err := dockerCli.ContextStore().GetMetadata(installerContext); err != nil && installerContext != "default" {
+			fmt.Println("This is a greeattttt error:", err)
+			return err
+		}
+		//fmt.Println("Setting current context with:", installerContext)
+		dockerCli.ConfigFile().CurrentContext = installerContext
+	}
+	return nil
 }

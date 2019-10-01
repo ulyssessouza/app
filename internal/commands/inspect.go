@@ -10,6 +10,7 @@ import (
 )
 
 type inspectOptions struct {
+	installerContextOptions
 	parametersOptions
 	registryOptions
 	pullOptions
@@ -26,6 +27,7 @@ func inspectCmd(dockerCli command.Cli) *cobra.Command {
 			return runInspect(dockerCli, firstOrEmpty(args), opts)
 		},
 	}
+	opts.installerContextOptions.addFlags(cmd.Flags())
 	opts.parametersOptions.addFlags(cmd.Flags())
 	opts.registryOptions.addFlags(cmd.Flags())
 	opts.pullOptions.addFlags(cmd.Flags())
@@ -34,8 +36,13 @@ func inspectCmd(dockerCli command.Cli) *cobra.Command {
 
 func runInspect(dockerCli command.Cli, appname string, opts inspectOptions) error {
 	defer muteDockerCli(dockerCli)()
+	opts.SetDefaultInstallerContext(dockerCli)
+
 	action, installation, errBuf, err := prepareCustomAction(internal.ActionInspectName, dockerCli, appname, nil, opts.registryOptions, opts.pullOptions, opts.parametersOptions)
 	if err != nil {
+		return err
+	}
+	if err := setInstallerContext(dockerCli, opts.installerContext); err != nil {
 		return err
 	}
 	if err := action.Run(&installation.Claim, nil, nil); err != nil {

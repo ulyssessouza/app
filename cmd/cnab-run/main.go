@@ -38,11 +38,13 @@ func getCnabAction() (cnabAction, string, error) {
 
 func main() {
 	action, actionName, err := getCnabAction()
+	fmt.Println("main.go::main()", action, actionName, err)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while parsing CNAB operation: %s", err)
 		os.Exit(1)
 	}
 	instanceName := os.Getenv("CNAB_INSTALLATION_NAME")
+	fmt.Println("instanceName", instanceName)
 	if err := action(instanceName); err != nil {
 		fmt.Fprintf(os.Stderr, "Action %q failed: %s", actionName, err)
 		os.Exit(1)

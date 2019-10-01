@@ -16,10 +16,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type listOptions struct {
-	targetContext string
-}
-
 var (
 	listColumns = []struct {
 		header string
@@ -40,25 +36,21 @@ var (
 )
 
 func listCmd(dockerCli command.Cli) *cobra.Command {
-	var opts listOptions
-
 	cmd := &cobra.Command{
 		Use:     "list [OPTIONS]",
 		Short:   "List the installations and their last known installation result",
 		Aliases: []string{"ls"},
 		Args:    cli.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runList(dockerCli, opts)
+			return runList(dockerCli)
 		},
 	}
-	cmd.Flags().StringVar(&opts.targetContext, "target-context", "", "List installations on this context")
 
 	return cmd
 }
 
-func runList(dockerCli command.Cli, opts listOptions) error {
-	targetContext := getTargetContext(opts.targetContext, dockerCli.CurrentContext())
-	installations, err := getInstallations(targetContext, config.Dir())
+func runList(dockerCli command.Cli) error {
+	installations, err := getInstallations(dockerCli.CurrentContext(), config.Dir())
 	if err != nil {
 		return err
 	}
@@ -88,12 +80,12 @@ func printValues(w io.Writer, installation *store.Installation) {
 	fmt.Fprintln(w, strings.Join(values, "\t"))
 }
 
-func getInstallations(targetContext, configDir string) ([]*store.Installation, error) {
+func getInstallations(dockerContext, configDir string) ([]*store.Installation, error) {
 	appstore, err := store.NewApplicationStore(configDir)
 	if err != nil {
 		return nil, err
 	}
-	installationStore, err := appstore.InstallationStore(targetContext)
+	installationStore, err := appstore.InstallationStore(dockerContext)
 	if err != nil {
 		return nil, err
 	}

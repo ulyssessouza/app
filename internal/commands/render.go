@@ -12,6 +12,7 @@ import (
 )
 
 type renderOptions struct {
+	installerContextOptions
 	parametersOptions
 	registryOptions
 	pullOptions
@@ -31,6 +32,7 @@ func renderCmd(dockerCli command.Cli) *cobra.Command {
 			return runRender(dockerCli, firstOrEmpty(args), opts)
 		},
 	}
+	opts.installerContextOptions.addFlags(cmd.Flags())
 	opts.parametersOptions.addFlags(cmd.Flags())
 	opts.registryOptions.addFlags(cmd.Flags())
 	opts.pullOptions.addFlags(cmd.Flags())
@@ -42,6 +44,7 @@ func renderCmd(dockerCli command.Cli) *cobra.Command {
 
 func runRender(dockerCli command.Cli, appname string, opts renderOptions) error {
 	defer muteDockerCli(dockerCli)()
+	opts.SetDefaultInstallerContext(dockerCli)
 
 	var w io.Writer = os.Stdout
 	if opts.renderOutput != "-" {
@@ -59,6 +62,9 @@ func runRender(dockerCli command.Cli, appname string, opts renderOptions) error 
 	}
 	installation.Parameters[internal.ParameterRenderFormatName] = opts.formatDriver
 
+	if err := setInstallerContext(dockerCli, opts.installerContext); err != nil {
+		return err
+	}
 	if err := action.Run(&installation.Claim, nil, nil); err != nil {
 		return fmt.Errorf("render failed: %s\n%s", err, errBuf)
 	}

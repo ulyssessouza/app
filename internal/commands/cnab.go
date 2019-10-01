@@ -154,27 +154,28 @@ func prepareCredentialSet(b *bundle.Bundle, opts ...credentialSetOpt) (map[strin
 		}
 	}
 
-	_, requiresDockerContext := b.Credentials[internal.CredentialDockerContextName]
-	_, hasDockerContext := creds[internal.CredentialDockerContextName]
-	if requiresDockerContext && !hasDockerContext {
-		return nil, errors.New("no target context specified. Use --target-context= or DOCKER_TARGET_CONTEXT= to define it")
-	}
+	//_, requiresDockerContext := b.Credentials[internal.CredentialDockerContextName]
+	//_, hasDockerContext := creds[internal.CredentialDockerContextName]
+	//if requiresDockerContext && !hasDockerContext {
+	//	return nil, errors.New("no target context specified. Use --target-context= or DOCKER_TARGET_CONTEXT= to define it")
+	//}
 
 	return creds, nil
 }
 
-func getTargetContext(optstargetContext, currentContext string) string {
-	var targetContext string
+func getInstallerContext(optsInstallerContext, currentContext string) string {
+	var installerContext string
+	const dockerInstallerContext = "DOCKER_INSTALLER_CONTEXT"
 	switch {
-	case optstargetContext != "":
-		targetContext = optstargetContext
-	case os.Getenv("DOCKER_TARGET_CONTEXT") != "":
-		targetContext = os.Getenv("DOCKER_TARGET_CONTEXT")
+	case optsInstallerContext != "":
+		installerContext = optsInstallerContext
+	case os.Getenv(dockerInstallerContext) != "":
+		installerContext = os.Getenv(dockerInstallerContext)
 	}
-	if targetContext == "" {
-		targetContext = currentContext
+	if installerContext == "" {
+		installerContext = currentContext
 	}
-	return targetContext
+	return installerContext
 }
 
 // prepareDriver prepares a driver per the user's request.
@@ -292,28 +293,28 @@ func resolveBundle(dockerCli command.Cli, bundleStore appstore.BundleStore, name
 	return nil, "", fmt.Errorf("could not resolve bundle %q", name)
 }
 
-func requiredClaimBindMount(c claim.Claim, targetContextName string, dockerCli command.Cli) (bindMount, error) {
+func requiredClaimBindMount(c claim.Claim, contextName string, dockerCli command.Cli) (bindMount, error) {
 	var specifiedOrchestrator string
 	if rawOrchestrator, ok := c.Parameters[internal.ParameterOrchestratorName]; ok {
 		specifiedOrchestrator = rawOrchestrator.(string)
 	}
 
-	return requiredBindMount(targetContextName, specifiedOrchestrator, dockerCli.ContextStore())
+	return requiredBindMount(contextName, specifiedOrchestrator, dockerCli.ContextStore())
 }
 
-func requiredBindMount(targetContextName string, targetOrchestrator string, s store.Store) (bindMount, error) {
+func requiredBindMount(contextName string, targetOrchestrator string, s store.Store) (bindMount, error) {
 	if targetOrchestrator == "kubernetes" {
 		return bindMount{}, nil
 	}
 
-	if targetContextName == "" {
-		targetContextName = "default"
+	if contextName == "" {
+		contextName = "default"
 	}
 
 	// in case of docker desktop, we want to rewrite the context in cases where it targets the local swarm or Kubernetes
 	s = &dockerDesktopAwareStore{Store: s}
 
-	ctxMeta, err := s.GetMetadata(targetContextName)
+	ctxMeta, err := s.GetMetadata(contextName)
 	if err != nil {
 		return bindMount{}, err
 	}
@@ -330,6 +331,8 @@ func requiredBindMount(targetContextName string, targetOrchestrator string, s st
 	}
 
 	host := dockerEndpoint.Host
+	fmt.Println("Host:", host)
+	fmt.Println("isDockerHostLocal(host):", isDockerHostLocal(host))
 	return bindMount{isDockerHostLocal(host), socketPath(host)}, nil
 }
 

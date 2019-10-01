@@ -40,7 +40,7 @@ func runWithDindSwarmAndRegistry(t *testing.T, todo func(dindSwarmAndRegistryInf
 	tmpDir := fs.NewDir(t, t.Name())
 	defer tmpDir.Remove()
 
-	cmd.Env = append(cmd.Env, "DOCKER_TARGET_CONTEXT=swarm-target-context")
+	//cmd.Env = append(cmd.Env, "DOCKER_TARGET_CONTEXT=swarm-target-context")
 
 	// The dind doesn't have the cnab-app-base image so we save it in order to load it later
 	saveCmd := icmd.Cmd{Command: dockerCli.Command("save", fmt.Sprintf("docker/cnab-app-base:%s", internal.Version), "-o", tmpDir.Join("cnab-app-base.tar.gz"))}
@@ -74,8 +74,8 @@ func runWithDindSwarmAndRegistry(t *testing.T, todo func(dindSwarmAndRegistryInf
 	// The workaround is to create a context with an empty host.
 	// This host will default to the unix socket inside the
 	// invocation image
-	cmd.Command = dockerCli.Command("context", "create", "swarm-target-context", "--docker", "host=", "--default-stack-orchestrator", "swarm")
-	icmd.RunCmd(cmd).Assert(t, icmd.Success)
+	//cmd.Command = dockerCli.Command("context", "create", "swarm-target-context", "--docker", "host=", "--default-stack-orchestrator", "swarm")
+	//icmd.RunCmd(cmd).Assert(t, icmd.Success)
 
 	// Initialize the swarm
 	cmd.Env = append(cmd.Env, "DOCKER_CONTEXT=swarm-context")
