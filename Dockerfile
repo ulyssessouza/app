@@ -1,7 +1,11 @@
-FROM dockercore/golang-cross:1.12.9@sha256:3ea9dcef4dd2c46d80445c0b22d6177817f4cfce22c523cc12a5a1091cb37705 AS cli-build
+ARG ALPINE_VERSION=3.10.3
+ARG GO_VERSION=1.13.3
+
+FROM dockercore/golang-cross:${GO_VERSION}@sha256:3ea9dcef4dd2c46d80445c0b22d6177817f4cfce22c523cc12a5a1091cb37705 AS cli-build
 ENV DISABLE_WARN_OUTSIDE_CONTAINER=1
 ARG CLI_CHANNEL=stable
 ARG CLI_VERSION=19.03.4
+ARG TAG="unknown"
 
 RUN apt-get install -y -q --no-install-recommends \
   coreutils \
@@ -19,16 +23,15 @@ ARG GOPROXY
 RUN make binary-windows
 
 # main dev image
-FROM golang:1.13.3 AS dev
-
+FROM golang:${GO_VERSION} AS base-dev
 RUN apt-get update && apt-get install -y -q --no-install-recommends \
   coreutils \
   util-linux \
   uuid-runtime
 
+FROM base-dev AS dev
 WORKDIR /go/src/github.com/docker/app/
 COPY --from=cli-build /go/src/github.com/docker/cli/build/docker-linux-amd64 /usr/bin/docker
-
 ENV PATH=${PATH}:/go/src/github.com/docker/app/bin/
 ARG DEP_VERSION=v0.5.4
 RUN curl -o /usr/bin/dep -L https://github.com/golang/dep/releases/download/${DEP_VERSION}/dep-linux-amd64 && \
@@ -60,19 +63,34 @@ COPY --from=cli-build /go/src/github.com/docker/cli/build/docker-darwin-amd64 do
 COPY --from=cli-build /go/src/github.com/docker/cli/build/docker-windows-amd64 docker-windows.exe
 
 FROM dev AS cross-build
-ARG TAG="unknown"
-RUN make TAG=${TAG} cross
+ARG LTAG=${TAG}
+RUN make TAG=${LTAG} cross
+
+FROM scratch AS docker-app-linux
+ARG PROJECT_PATH=/go/src/github.com/docker/app
+ARG LTAG={TAG}
+RUN make TAG=${LTAG} bin/docker-app-linux
+
+FROM scratch AS docker-app-darwin
+ARG PROJECT_PATH=/go/src/github.com/docker/app
+ARG LTAG={TAG}
+RUN make TAG=${LTAG} bin/docker-app-darwin
+
+FROM scratch AS docker-app-windows
+ARG PROJECT_PATH=/go/src/github.com/docker/app
+ARG LTAG={TAG}
+RUN make TAG=${LTAG} bin/docker-app-windows
 
 FROM scratch AS cross
 ARG PROJECT_PATH=/go/src/github.com/docker/app
-COPY --from=cross-build ${PROJECT_PATH}/bin/docker-app-linux docker-app-linux
-COPY --from=cross-build ${PROJECT_PATH}/bin/docker-app-darwin docker-app-darwin
-COPY --from=cross-build ${PROJECT_PATH}/bin/docker-app-windows.exe docker-app-windows.exe
+COPY --from=docker-app-linux ${PROJECT_PATH}/bin/docker-app-linux docker-app-linux
+COPY --from=docker-app-darwin ${PROJECT_PATH}/bin/docker-app-darwin docker-app-darwin
+COPY --from=docker-app-windows ${PROJECT_PATH}/bin/docker-app-windows.exe docker-app-windows.exe
 
 FROM cross-build AS e2e-cross-build
-ARG TAG="unknown"
+ARG LTAG={TAG}
 # Run e2e tests
-RUN make TAG=${TAG} e2e-cross
+RUN make TAG=${LTAG} e2e-cross
 
 FROM scratch AS e2e-cross
 ARG PROJECT_PATH=/go/src/github.com/docker/app
@@ -85,3 +103,31 @@ COPY --from=e2e-cross-build /usr/local/bin/gotestsum-windows.exe gotestsum-windo
 COPY --from=e2e-cross-build /usr/local/bin/test2json-linux test2json-linux
 COPY --from=e2e-cross-build /usr/local/bin/test2json-darwin test2json-darwin
 COPY --from=e2e-cross-build /usr/local/bin/test2json-windows.exe test2json-windows.exe
+
+FROM base-dev AS build-invocation
+WORKDIR /go/src/github.com/docker/app/
+COPY . .
+ARG LTAG=${TAG}
+RUN make BUILD_TAG=${BUILD_TAG} TAG=${LTAG} bin/cnab-run
+
+# local cnab invocation image
+FROM alpine:${ALPINE_VERSION} as invocation
+RUN apk add --no-cache ca-certificates && adduser -S cnab
+USER cnab
+COPY --from=build-invocation /go/src/github.com/docker/app/bin/cnab-run /cnab/app/run
+WORKDIR /cnab/app
+CMD /cnab/app/run
+
+# Linter
+FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION}
+RUN apk add --no-cache \
+    curl \
+    git \
+    make \
+    coreutils
+RUN GO111MODULE=on go get \
+    github.com/golangci/golangci-lint/cmd/golangci-lint@v1.16.0 && \
+    rm -rf /go/src/* /go/pkg/*
+WORKDIR /go/src/github.com/docker/app
+ENV CGO_ENABLED=0
+COPY . .

@@ -36,6 +36,15 @@ build_dev_image:
 shell: build_dev_image ## run a shell in the docker build image
 	docker run -ti --rm $(DEV_IMAGE_NAME) bash
 
+.PHONY: bin/$(BIN_NAME)-windows
+bin/$(BIN_NAME)-%.exe bin/$(BIN_NAME)-%: cmd/$(BIN_NAME) invocation-image
+	@echo $(BIN_NAME)-$*
+	@echo $<
+	@echo $(CROSS_IMAGE_NAME)
+	docker build $(BUILD_ARGS) --output type=local,dest=./bin/ --target="$(BIN_NAME)-$*" -t "$(BIN_NAME)-$*" .
+	docker image rm $(BIN_NAME)-$*
+	@$(call chmod,+x,bin/$(BIN_NAME)-$*)
+
 cross: create_bin ## cross-compile binaries (linux, darwin, windows)
 	docker build $(BUILD_ARGS) --output type=local,dest=./bin/ --target=cross -t $(CROSS_IMAGE_NAME) .
 	@$(call chmod,+x,bin/$(BIN_NAME)-linux)
@@ -87,7 +96,7 @@ coverage: coverage-run coverage-results
 
 lint: ## run linter(s)
 	$(info Linting...)
-	docker build -t $(LINT_IMAGE_NAME) -f Dockerfile.lint .
+	docker build -t $(LINT_IMAGE_NAME) .
 	docker run --rm $(LINT_IMAGE_NAME) make lint
 
 vendor: build_dev_image
@@ -119,7 +128,11 @@ specification/bindata.go: specification/schemas/*.json build_dev_image
 schemas: specification/bindata.go ## generate specification/bindata.go from json schemas
 
 invocation-image:
-	docker build -f Dockerfile.invocation-image $(BUILD_ARGS) --target=invocation -t $(CNAB_BASE_INVOCATION_IMAGE_NAME) .
+	@echo
+	$(if $(shell docker images -q $(CNAB_BASE_INVOCATION_IMAGE_NAME)),, \
+		@echo "Building invocation image" && \
+		docker build $(BUILD_ARGS) --target=invocation -t $(CNAB_BASE_INVOCATION_IMAGE_NAME) . \
+	)
 
 save-invocation-image-tag:
 	docker tag $(CNAB_BASE_INVOCATION_IMAGE_NAME) docker/cnab-app-base:$(INVOCATION_IMAGE_TAG)

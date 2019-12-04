@@ -29,7 +29,7 @@ GO_BUILD = $(STATIC_FLAGS) go build -tags=$(BUILDTAGS) -ldflags=$(LDFLAGS)
 GO_TEST = $(STATIC_FLAGS) go test -tags=$(BUILDTAGS) -ldflags=$(LDFLAGS)
 GO_TESTSUM = $(STATIC_FLAGS) gotestsum --junitfile $(TEST_RESULTS_DIR)/$(TEST_RESULTS_PREFIX)$(1) -- -tags=$(BUILDTAGS) -ldflags=$(LDFLAGS)
 
-all: bin/$(BIN_NAME) build-invocation-image test
+all: bin/$(BIN_NAME) invocation-image test
 
 check_go_env:
 	@test $$(go list) = "$(PKG_NAME)" || \
@@ -50,15 +50,16 @@ bin/$(BIN_NAME)-e2e-%.exe bin/$(BIN_NAME)-e2e-%: e2e bin/$(BIN_NAME)-%
 	GOOS=$* $(GO_TEST) -c -o $@ ./e2e/
 
 .PHONY: bin/$(BIN_NAME)-windows
-bin/$(BIN_NAME)-%.exe bin/$(BIN_NAME)-%: cmd/$(BIN_NAME) check_go_env
+bin/$(BIN_NAME)-%.exe bin/$(BIN_NAME)-%: cmd/$(BIN_NAME) check_go_env invocation-image
 	GOOS=$* $(GO_BUILD) -o $@ ./$<
 
 bin/%: cmd/% check_go_env
 	$(GO_BUILD) -o $@$(EXEC_EXT) ./$<
 
-build-invocation-image: ## build invocation image if not present (internal usage, not diplayed in help)
-	@echo "Build invocation image if needed"
+invocation-image: ## build invocation image if not present (internal usage, not diplayed in help)
+	@echo
 	$(if $(shell docker images -q docker/cnab-app-base:$(TAG)),, \
+		@echo "Building invocation image" && \
 		$(MAKE) -f ./docker.Makefile invocation-image \
 	)
 
@@ -67,6 +68,7 @@ check: lint test
 test: test-unit test-e2e ## run all tests
 
 lint: ## run linter(s)
+	GO111MODULE=off go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
 	@echo "Linting..."
 	@golangci-lint run ./...
 
@@ -123,7 +125,6 @@ help: ## this help
 
 .PHONY: cross e2e-cross test check lint test-unit test-e2e coverage coverage-bin coverage-test-unit coverage-test-e2e clean vendor schemas help fix-coverage
 .DEFAULT: all
-
 
 .PHONY: yamldocs
 yamldocs: ## generate documentation YAML files consumed by docs repo
